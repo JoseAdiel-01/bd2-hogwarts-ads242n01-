@@ -203,9 +203,8 @@ SELECT
     (SELECT COUNT(*) FROM produto) AS produtos;
 
 -- =====================================================================
--- 2. MANUTENÇÃO PÓS-CARGA (ALTER E UPDATE - COMPATÍVEL COM SAFE UPDATES)
+-- 2. MANUTENÇÃO PÓS-CARGA (ALTER E UPDATE)
 -- =====================================================================
-
 -- Questão 1
 ALTER TABLE aluno ADD COLUMN email VARCHAR(100);
 
@@ -221,76 +220,87 @@ ALTER TABLE casa MODIFY COLUMN fundador VARCHAR(100);
 -- Questão 5
 ALTER TABLE professor RENAME COLUMN data_contratacao TO data_admissao;
 
--- Questão 6 (Adicionado filtro pela PK id_aluno > 0)
+-- Questão 6
 UPDATE aluno 
-SET email = CONCAT(LOWER(REPLACE(nome, ' ', '.')), '@hogwarts.edu')
-WHERE id_aluno > 0;
+SET email = CONCAT(LOWER(REPLACE(nome, ' ', '.')), '@hogwarts.edu');
 
 -- Questão 7
 ALTER TABLE aluno ADD CONSTRAINT uq_aluno_email UNIQUE (email);
 
--- Questão 8 (Adicionado filtro pela PK id_matricula > 0)
+-- Questão 8
 UPDATE matricula 
 SET nota = LEAST(nota + 0.5, 10.00)
-WHERE id_matricula > 0 
-  AND id_disc IN (
-      SELECT id_disc 
-      FROM disciplina 
-      WHERE id_prof = (SELECT id_prof FROM professor WHERE nome = 'Remo Lupin')
-  );
+WHERE id_disc IN (
+    SELECT id_disc 
+    FROM disciplina 
+    WHERE id_prof = (SELECT id_prof FROM professor WHERE nome = 'Remo Lupin')
+);
 
--- Questão 9 (Adicionado filtro pela PK id_matricula > 0)
+-- Questão 9
 UPDATE matricula 
 SET situacao = CASE 
     WHEN nota >= 6 THEN 'Aprovado' 
     ELSE 'Reprovado' 
-END
-WHERE id_matricula > 0;
+END;
 
--- Questão 10 (Adicionado filtro pela PK id_prof > 0)
+-- Questão 10
 UPDATE professor 
 SET salario = salario * 1.10 
-WHERE id_prof > 0 
-  AND id_casa IS NOT NULL 
-  AND data_admissao < '1980-01-01';
+WHERE id_casa IS NOT NULL AND data_admissao < '1980-01-01';
 
--- Questão 11 (Adicionado filtro pela PK id_prod > 0)
+-- Questão 11
 UPDATE produto 
 SET ativo = 'N' 
-WHERE id_prod > 0 
-  AND estoque = 0;
+WHERE estoque = 0;
 
--- Questão 12 (Adicionado filtro pela PK id_prod > 0)
+-- Questão 12
 UPDATE produto 
 SET preco = preco * 0.80 
-WHERE id_prod > 0 
-  AND loja = 'Dedosdemel';
+WHERE loja = 'Dedosdemel';
 
 -- =====================================================================
 -- 3. REMOÇÃO DE DADOS (DELETE) E TESTES DE RESTRIÇÕES
 -- =====================================================================
 -- Questão 13
--- Erro:
--- Explicação:
+-- DELETE FROM casa WHERE nome_casa = 'Sonserina';
+-- Erro: Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails
+-- Explicação: A casa 'Sonserina' está sendo referenciada por registros nas tabelas 'professor' e 'aluno'. O banco bloqueia a exclusão para manter a integridade referencial da chave estrangeira (FK).
 
 -- Questão 14
--- Erro:
--- Explicação:
+-- INSERT INTO aluno (nome, ano_escolar, id_casa) VALUES ('Dobby', 8, 1);
+-- Erro: Error Code: 3819. Check constraint 'aluno_chk_1' is violated.
+-- Explicação: A tabela 'aluno' possui uma restrição CHECK que permite apenas valores entre 1 e 7 para a coluna 'ano_escolar'. O valor 8 viola essa regra.
 
 -- Questão 15
--- Erro:
--- Explicação:
+-- INSERT INTO aluno (nome, ano_escolar, id_casa, email) VALUES ('Harry Potter (Polissuco)', 5, 1, 'harry.potter@hogwarts.edu');
+-- Erro: Error Code: 1062. Duplicate entry 'harry.potter@hogwarts.edu' for key 'aluno.uq_aluno_email'
+-- Explicação: A coluna 'email' possui a restrição UNIQUE (uq_aluno_email) criada na questão 7. Como esse e-mail já pertence ao aluno Harry Potter, o banco impede a duplicidade.
 
 -- Questão 16
--- Erro:
--- Explicação:
+-- DELETE FROM professor WHERE nome = 'Severo Snape';
+-- Erro: Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails
+-- Explicação: O professor Severo Snape está vinculado à disciplina 'Poções' na tabela 'disciplina' (FK id_prof), impedindo sua exclusão direta.
 
 -- Questão 17
+DELETE FROM professor WHERE nome = 'Gilderoy Lockhart';
+-- Explicação: Este comando funciona porque Gilderoy Lockhart não possui vínculos (chaves estrangeiras) em nenhuma outra tabela (não ministra disciplinas e não tem registros de pontos), ao contrário de Severo Snape.
 
 -- Questão 18
+DELETE FROM matricula 
+WHERE id_aluno IN (SELECT id_aluno FROM aluno WHERE nome = 'Vicente Crabbe');
+
+DELETE FROM aluno 
+WHERE nome = 'Vicente Crabbe';
 
 -- Questão 19
+DELETE FROM disciplina 
+WHERE id_disc NOT IN (SELECT DISTINCT id_disc FROM matricula);
 
+SELECT 
+    (SELECT COUNT(*) FROM professor) AS professores,
+    (SELECT COUNT(*) FROM aluno) AS alunos,
+    (SELECT COUNT(*) FROM disciplina) AS disciplinas,
+    (SELECT COUNT(*) FROM matricula) AS matriculas;
 
 -- =====================================================================
 -- 4. TRIGGERS
