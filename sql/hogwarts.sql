@@ -203,32 +203,68 @@ SELECT
     (SELECT COUNT(*) FROM produto) AS produtos;
 
 -- =====================================================================
--- 2. MANUTENÇÃO PÓS-CARGA (ALTER E UPDATE)
+-- 2. MANUTENÇÃO PÓS-CARGA (ALTER E UPDATE - COMPATÍVEL COM SAFE UPDATES)
 -- =====================================================================
+
 -- Questão 1
+ALTER TABLE aluno ADD COLUMN email VARCHAR(100);
 
 -- Questão 2
+ALTER TABLE matricula ADD COLUMN situacao VARCHAR(20) DEFAULT 'Cursando';
 
 -- Questão 3
+ALTER TABLE produto ADD COLUMN ativo CHAR(1) DEFAULT 'S';
 
 -- Questão 4
+ALTER TABLE casa MODIFY COLUMN fundador VARCHAR(100);
 
 -- Questão 5
+ALTER TABLE professor RENAME COLUMN data_contratacao TO data_admissao;
 
--- Questão 6
+-- Questão 6 (Adicionado filtro pela PK id_aluno > 0)
+UPDATE aluno 
+SET email = CONCAT(LOWER(REPLACE(nome, ' ', '.')), '@hogwarts.edu')
+WHERE id_aluno > 0;
 
 -- Questão 7
+ALTER TABLE aluno ADD CONSTRAINT uq_aluno_email UNIQUE (email);
 
--- Questão 8
+-- Questão 8 (Adicionado filtro pela PK id_matricula > 0)
+UPDATE matricula 
+SET nota = LEAST(nota + 0.5, 10.00)
+WHERE id_matricula > 0 
+  AND id_disc IN (
+      SELECT id_disc 
+      FROM disciplina 
+      WHERE id_prof = (SELECT id_prof FROM professor WHERE nome = 'Remo Lupin')
+  );
 
--- Questão 9
+-- Questão 9 (Adicionado filtro pela PK id_matricula > 0)
+UPDATE matricula 
+SET situacao = CASE 
+    WHEN nota >= 6 THEN 'Aprovado' 
+    ELSE 'Reprovado' 
+END
+WHERE id_matricula > 0;
 
--- Questão 10
+-- Questão 10 (Adicionado filtro pela PK id_prof > 0)
+UPDATE professor 
+SET salario = salario * 1.10 
+WHERE id_prof > 0 
+  AND id_casa IS NOT NULL 
+  AND data_admissao < '1980-01-01';
 
--- Questão 11
+-- Questão 11 (Adicionado filtro pela PK id_prod > 0)
+UPDATE produto 
+SET ativo = 'N' 
+WHERE id_prod > 0 
+  AND estoque = 0;
 
--- Questão 12
-
+-- Questão 12 (Adicionado filtro pela PK id_prod > 0)
+UPDATE produto 
+SET preco = preco * 0.80 
+WHERE id_prod > 0 
+  AND loja = 'Dedosdemel';
 
 -- =====================================================================
 -- 3. REMOÇÃO DE DADOS (DELETE) E TESTES DE RESTRIÇÕES
